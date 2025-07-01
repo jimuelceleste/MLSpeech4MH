@@ -1,0 +1,90 @@
+name: "ADReSS 2020 ML Training - Linguistic Features - Classification Replication"
+description: |
+  Experiment protocol patterned from Shah et al. (2021) for Linguistic Features 
+  Frontiers in Computer Science 3, 624659. DOI: 10.3389/fcomp.2021.624659
+  Note: First, the type of cross-validation procedure (nested vs flat) was not
+  specified in the paper. Here, flat subject-wise cross-validation is implemented. 
+  Second, the scoring used for hyperparameter optimization was also not mentioned. 
+  Here, F1 score is used as the optimization scoring metric. Last, the features used 
+  in the study were extracted using CLAN. Here, we extracted linguistic features 
+  using LFTK. This replication experiment aims to test whether the same performance 
+  as the study could be achieved using the LFTK feature set.
+
+training_config:
+  technique: "flat_cross_validation"
+  parameters:
+    task: "classification"
+    metadata__filename: "metadata.csv"
+    metadata__label_column: "binary_label"
+    fold__technique: "subject_wise"
+    fold__n_splits: 5
+    fold__random_state: 42
+    fold__shuffle: True
+    optimization__technique: "grid_search"
+    optimization__scoring: "f1"
+    evaluation__metrics: [
+      "accuracy_score",
+      "precision_score",
+      "recall_score",  
+      "f1_score",
+      "specificity_score", 
+      "sensitivity_score",
+      "recall_macro_score"
+    ]
+
+pipeline_config: 
+  - unique_id: "svm_classifier"
+    steps: 
+      feature_scaler: "standard_scaler"
+      pca: "pca"
+      model: "support_vector_classifier"
+    parameters:
+      feature_scaler__with_mean: [True]
+      feature_scaler__with_std: [True]
+      pca__n_components: [10, 20, 30, 50]
+      model__C: [0.1, 1, 10, 100, 1000]
+      model__kernel: ['linear', 'rbf', 'poly']
+
+  - unique_id: "logistic_regression_classifier"
+    steps: 
+      feature_scaler: "standard_scaler"
+      pca: "pca"
+      model: "logistic_regression_classifier"
+    parameters:
+      feature_scaler__with_mean: [True]
+      feature_scaler__with_std: [True]
+      pca__n_components: [10, 20, 30, 50]
+      model__C: [
+        1.00000000e-04, 2.63665090e-04, 6.95192796e-04, 1.83298071e-03,
+        4.83293024e-03, 1.27427499e-02, 3.35981829e-02, 8.85866790e-02,
+        2.33572147e-01, 6.15848211e-01, 1.62377674e+00, 4.28133240e+00,
+        1.12883789e+01, 2.97635144e+01, 7.84759970e+01, 2.06913808e+02,
+        5.45559478e+02, 1.43844989e+03, 3.79269019e+03, 1.00000000e+04
+      ]
+      model__penalty: ['l1', 'l2'] 
+
+  - unique_id: "random_forest_classifier"
+    steps: 
+      feature_scaler: "standard_scaler"
+      pca: "pca"
+      model: "random_forest_classifier"
+    parameters:
+      feature_scaler__with_mean: [True]
+      feature_scaler__with_std: [True]
+      pca__n_components: [10, 20, 30, 50]
+      model__n_estimators: [100, 300, 500, 700]
+      model__max_features: [5, 15, 25, 35, 45, 55]
+      model__min_samples_leaf: [1, 2, 3, 4]
+
+  - unique_id: "xgb_classifier"
+    steps: 
+      feature_scaler: "standard_scaler"
+      pca: "pca"
+      model: "xgb_classifier"
+    parameters:
+      feature_scaler__with_mean: [True]
+      feature_scaler__with_std: [True]
+      pca__n_components: [10, 20, 30, 50]
+      model__max_depth: [5, 6, 7, 8]
+      model__learning_rate: [0.02, 0.05, 0.07, 0.1]
+      model__n_estimators: [50, 100, 200, 500, 1000]

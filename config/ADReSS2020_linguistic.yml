@@ -1,0 +1,38 @@
+name: "ADReSS2020 Linguistic Preprocessing Pipeline"
+description: "Steps: LFTK Feature Extraction: surface"
+pipeline:
+  - task: "extract_lftk_features"
+    unique_id: "lftk_features"
+    dependency: "input"
+    parameters:
+      domain: "*"
+      family: "*"
+      language: "*"
+  - task: "extract_lftk_features"
+    unique_id: "surface_features"
+    dependency: "input"
+    parameters:
+      domain: "surface"
+      family: "*"
+      language: "*"
+  - task: "extract_lftk_features"
+    unique_id: "lexico_semantics_features"
+    dependency: "input"
+    parameters:
+      domain: "lexico-semantics"
+      family: "*"
+      language: "*"
+  - task: "extract_lftk_features"
+    unique_id: "discourse_features"
+    dependency: "input"
+    parameters:
+      domain: "discourse"
+      family: "*"
+      language: "*"
+  - task: "extract_lftk_features"
+    unique_id: "syntax_features"
+    dependency: "input"
+    parameters:
+      domain: "syntax"
+      family: "*"
+      language: "*"

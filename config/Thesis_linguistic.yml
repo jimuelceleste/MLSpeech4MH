@@ -1,0 +1,38 @@
+name: "Combined DementiaBank dataset linguistic feature extraction"
+description: "Steps: LFTK all, surface, lexico-semantics, discourse, syntax"
+pipeline:
+  - task: "extract_lftk_features"
+    unique_id: "lftk_features"
+    dependency: "input"
+    parameters:
+      domain: "*"
+      family: "*"
+      language: "general"
+  - task: "extract_lftk_features"
+    unique_id: "surface_features"
+    dependency: "input"
+    parameters:
+      domain: "surface"
+      family: "*"
+      language: "general"
+  - task: "extract_lftk_features"
+    unique_id: "lexico_semantics_features"
+    dependency: "input"
+    parameters:
+      domain: "lexico-semantics"
+      family: "*"
+      language: "general"
+  - task: "extract_lftk_features"
+    unique_id: "discourse_features"
+    dependency: "input"
+    parameters:
+      domain: "discourse"
+      family: "*"
+      language: "general"
+  - task: "extract_lftk_features"
+    unique_id: "syntax_features"
+    dependency: "input"
+    parameters:
+      domain: "syntax"
+      family: "*"
+      language: "general"

@@ -1,0 +1,95 @@
+name: "TAUKADIAL2024 Acoustic Preprocessing Pipeline"
+description: "Steps: Bit-Depth Conversion, Denoising, Amplitude Normalization, openSMILE Feature Extraction, and openXBOW Feature Extraction"
+pipeline:
+  - task: "convert_audio_file_type"
+    unique_id: "mp3_audio"
+    dependency: "input"
+    parameters:
+      input_format: "wav"
+      output_format: "mp3"
+  - task: "convert_audio_file_type"
+    unique_id: "wav"
+    dependency: "mp3_audio"
+    parameters: 
+      input_format: "mp3"
+      output_format: "wav"
+  - task: "convert_audio_bit_depth" 
+    unique_id: "converted_bit_depth"
+    dependency: "wav"
+    parameters:
+      target_bit_depth: "PCM_16"
+  - task: "denoise_audio_with_logmmse"
+    unique_id: "denoised"
+    dependency: "converted_bit_depth"
+    parameters:
+      initial_noise: 6
+      window_size: 0
+      noise_threshold: 0.15
+  - task: "normalize_audio_amplitude"
+    unique_id: "amplitude_normalized"
+    dependency: "denoised"
+    parameters:
+      target_dbfs: -20
+  - task: "extract_opensmile_features"
+    unique_id: "compare_2016_lld"
+    dependency: "amplitude_normalized"
+    parameters: 
+      feature_set: "compare_2016"
+      level: "lld"
+      is_for_openxbow: True
+  - task: "extract_opensmile_features"
+    unique_id: "compare_2016_functionals"
+    dependency: "amplitude_normalized"
+    parameters: 
+      feature_set: "compare_2016"
+      level: "functionals"
+      is_for_openxbow: False
+  - task: "extract_opensmile_features"
+    unique_id: "gemaps_functionals"
+    dependency: "amplitude_normalized"
+    parameters: 
+      feature_set: "gemaps"
+      level: "functionals" 
+      is_for_openxbow: False
+  - task: "extract_opensmile_features"
+    unique_id: "gemaps_lld"
+    dependency: "amplitude_normalized"
+    parameters: 
+      feature_set: "gemaps"
+      level: "lld"
+      is_for_openxbow: True
+  - task: "extract_opensmile_features"
+    unique_id: "egemaps_functionals"
+    dependency: "amplitude_normalized"
+    parameters:
+      feature_set: "egemaps"
+      level: "functionals"
+      is_for_openxbow: False
+  - task: "extract_opensmile_features"
+    unique_id: "egemaps_lld"
+    dependency: "amplitude_normalized"
+    parameters:
+      feature_set: "egemaps"
+      level: "lld" 
+      is_for_openxbow: True
+  - task: "extract_openxbow_features"
+    unique_id: "boaw_size_500_compare_2016_lld"
+    dependency: "compare_2016_lld"
+    parameters: 
+      openxbow_jar_app: '/Users/jimuelcelestejr/Documents/codebook/openXBOW/openXBOW.jar'
+      audio_book_size: 500
+      clustering: "kmeans++"
+  - task: "extract_openxbow_features"
+    unique_id: "boaw_size_300_compare_2016_lld"
+    dependency: "compare_2016_lld"
+    parameters: 
+      openxbow_jar_app: '/Users/jimuelcelestejr/Documents/codebook/openXBOW/openXBOW.jar'
+      audio_book_size: 300
+      clustering: "kmeans"
+  - task: "extract_openxbow_features"
+    unique_id: "boaw_size_100_compare_2016_lld"
+    dependency: "compare_2016_lld"
+    parameters: 
+      openxbow_jar_app: '/Users/jimuelcelestejr/Documents/codebook/openXBOW/openXBOW.jar'
+      audio_book_size: 100
+      clustering: "random"

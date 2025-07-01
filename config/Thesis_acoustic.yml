@@ -1,0 +1,26 @@
+name: "Combined DementiaBank dataset acoustic feature extraction"
+description: "Steps: eGeMAPS, ComParE 2016, BoAW, Small World, wav2vec"
+pipeline:
+  - task: "extract_opensmile_features"
+    unique_id: "egemaps_functionals"
+    dependency: "input"
+    parameters:
+      feature_set: "egemaps"
+      level: "functionals"
+      is_for_openxbow: False
+  - task: "extract_opensmile_features"
+    unique_id: "compare_2016_lld"
+    dependency: "input"
+    parameters: 
+      feature_set: "compare_2016"
+      level: "lld"
+      is_for_openxbow: True
+  - task: "extract_openxbow_features"
+    unique_id: "boaw_size_200_compare_2016_lld"
+    dependency: "compare_2016_lld"
+    parameters: 
+      openxbow_jar_app: '/Users/jimuelcelestejr/Documents/codebook/openXBOW/openXBOW.jar'
+      audio_book_size: 200
+      clustering: "kmeans"
+  # Small World 
+  # wav2vec 

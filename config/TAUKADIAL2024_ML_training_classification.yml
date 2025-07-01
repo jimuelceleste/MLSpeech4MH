@@ -1,0 +1,224 @@
+name: "TAUKADIAL2024 ML Training"
+description: "Experiment protocol to compare different pipelines with Nested Subject-Wise CV."
+
+training_config:
+  technique: "nested_cross_validation"
+  parameters:
+    task: "classification"
+    metadata__label_column: "binary_label"
+    outer_fold__technique: "subject_wise"
+    outer_fold__n_splits: 5
+    outer_fold__random_state: 42
+    outer_fold__shuffle: True 
+    inner_fold__technique: "subject_wise"
+    inner_fold__n_splits: 5
+    inner_fold__random_state: 42 
+    inner_fold__shuffle: True
+    optimization__technique: "grid_search" # bayes_search
+    optimization__scoring: "recall_macro"
+    evaluation__metrics: [
+      "accuracy_score", 
+      "f1_score", 
+      "recall_macro_score",
+      "precision_score", 
+      "recall_score", 
+      "specificity_score", 
+      "sensitivity_score",
+      "geometric_mean_score"
+    ]
+
+pipeline_config: 
+  # - unique_id: "random_forest_classifier"
+  #   steps: 
+  #     feature_scaler: "standard_scaler"
+  #     feature_selector: "select_k_best"
+  #     data_augmenter: "smote"
+  #     model: "random_forest_classifier"
+  #   parameters:
+  #     feature_scaler__with_mean: [True]
+  #     feature_scaler__with_std: [True]
+  #     feature_selector__k: [22, 44, 66, 88] # {25, 50, 75, 100}% of 88 eGeMAPS features
+  #     # feature_selector__k: [
+  #     #   1593, # ~25% of 6374 ComParE 2016 features
+  #     #   3187, # ~50%
+  #     #   4780, # ~75%
+  #     #   6373  # 100%
+  #     # ]
+  #     # feature_selector__k: [
+  #     #   36,  # ~25% of 141 LFTK handcrafted features 
+  #     #   71,  # ~50%
+  #     #   106, # ~75%
+  #     #   141  # 100%
+  #     # ]
+  #     # feature_selector__k: [
+  #     #   16, # ~25% of 61 Lexico-semantic Features
+  #     #   31, # ~50%
+  #     #   46, # ~75%
+  #     #   61  # 100%
+  #     # ]
+  #     # feature_selector__k: [
+  #     #   18, # ~25% of 69 Syntax Features
+  #     #   35, # ~50%
+  #     #   52, # ~75%
+  #     #   69  # 100%
+  #     # ]
+  #     # feature_selector__k: [ 
+  #     #   58,   # 25% of 229 eGeMAPS + LFTK Features
+  #     #   115,  # 50%
+  #     #   172,  # 75%
+  #     #   229   # 100%
+  #     # ]
+  #     data_augmenter__sampling_strategy: ["minority"]
+  #     data_augmenter__random_state: [55]
+  #     data_augmenter__k_neighbors: [5] # default
+  #     model__n_estimators: [100, 300, 500, 700]
+  #     model__max_features: [5, 15, 25, 35, 45, 55]
+  #     model__min_samples_leaf: [1, 2, 3, 4]
+
+  - unique_id: "svm_classifier"
+    steps: 
+      feature_scaler: "standard_scaler"
+      feature_selector: "select_k_best"
+      data_augmenter: "smote"
+      model: "support_vector_classifier"
+    parameters:
+      feature_scaler__with_mean: [True]
+      feature_scaler__with_std: [True]
+      feature_selector__k: [22, 44, 66, 88] # {25, 50, 75, 100}% of 88 eGeMAPS features
+      # feature_selector__k: [
+      #   1593, # 25% of 6374 ComParE 2016 features
+      #   3187, # 50%
+      #   4780, # 75%
+      #   6373  # 100%
+      # ]
+      # feature_selector__k: [
+      #   36,  # ~25% of 141 LFTK handcrafted features 
+      #   71,  # ~50%
+      #   106, # ~75%
+      #   141  # 100%
+      # ]
+      # feature_selector__k: [
+      #   16, # ~25% of 61 Lexico-semantic Features
+      #   31, # ~50%
+      #   46, # ~75%
+      #   61  # 100%
+      # ]
+      # feature_selector__k: [
+      #   18, # ~25% of 69 Syntax Features
+      #   35, # ~50%
+      #   52, # ~75%
+      #   69  # 100%
+      # ]
+      # feature_selector__k: [ 
+      #   58,   # 25% of 229 eGeMAPS + LFTK Features
+      #   115,  # 50%
+      #   172,  # 75%
+      #   229   # 100%
+      # ]
+      data_augmenter__sampling_strategy: ["minority"]
+      data_augmenter__random_state: [55]
+      data_augmenter__k_neighbors: [5] # default
+      model__C: [0.1, 1, 10, 100, 1000]
+      model__kernel: ['linear', 'poly', 'rbf']
+      model__gamma: [1, 0.1, 0.01, 0.001, "scale"]
+      model__max_iter: [50, 100, 150]
+
+  - unique_id: "logistic_regression_classifier"
+    steps: 
+      feature_scaler: "standard_scaler"
+      feature_selector: "select_k_best"
+      data_augmenter: "smote"
+      model: "logistic_regression_classifier"
+    parameters:
+      feature_scaler__with_mean: [True]
+      feature_scaler__with_std: [True]
+      feature_selector__k: [22, 44, 66, 88] # {25, 50, 75, 100}% of 88 eGeMAPS features
+      # feature_selector__k: [
+      #   1593, # 25% of 6374 ComParE 2016 features
+      #   3187, # 50%
+      #   4780, # 75%
+      #   6373  # 100%
+      # ]
+      # feature_selector__k: [
+      #   36,  # ~25% of 141 LFTK handcrafted features 
+      #   71,  # ~50%
+      #   106, # ~75%
+      #   141  # 100%
+      # ]
+      # feature_selector__k: [
+      #   16, # ~25% of 61 Lexico-semantic Features
+      #   31, # ~50%
+      #   46, # ~75%
+      #   61  # 100%
+      # ]
+      # feature_selector__k: [
+      #   18, # ~25% of 69 Syntax Features
+      #   35, # ~50%
+      #   52, # ~75%
+      #   69  # 100%
+      # ]
+      # feature_selector__k: [ 
+      #   58,   # 25% of 229 eGeMAPS + LFTK Features
+      #   115,  # 50%
+      #   172,  # 75%
+      #   229   # 100%
+      # ]
+      data_augmenter__sampling_strategy: ["minority"]
+      data_augmenter__random_state: [55]
+      data_augmenter__k_neighbors: [5] # default
+      model__C: [
+        1.00000000e-04, 2.63665090e-04, 6.95192796e-04, 1.83298071e-03,
+        4.83293024e-03, 1.27427499e-02, 3.35981829e-02, 8.85866790e-02,
+        2.33572147e-01, 6.15848211e-01, 1.62377674e+00, 4.28133240e+00,
+        1.12883789e+01, 2.97635144e+01, 7.84759970e+01, 2.06913808e+02,
+        5.45559478e+02, 1.43844989e+03, 3.79269019e+03, 1.00000000e+04
+      ]
+      model__penalty: ['l1', 'l2'] 
+      model__solver: ['liblinear']
+
+  - unique_id: "xgb_classifier"
+    steps: 
+      feature_scaler: "standard_scaler"
+      feature_selector: "select_k_best"
+      data_augmenter: "smote"
+      model: "xgb_classifier"
+    parameters:
+      feature_scaler__with_mean: [True]
+      feature_scaler__with_std: [True]
+      feature_selector__k: [22, 44, 66, 88] # {25, 50, 75, 100}% of 88 eGeMAPS features
+      # feature_selector__k: [
+      #   1593, # 25% of 6374 ComParE 2016 features
+      #   3187, # 50%
+      #   4780, # 75%
+      #   6373  # 100%
+      # ]
+      # feature_selector__k: [
+      #   36,  # ~25% of 141 LFTK handcrafted features 
+      #   71,  # ~50%
+      #   106, # ~75%
+      #   141  # 100%
+      # ]
+      # feature_selector__k: [
+      #   16, # ~25% of 61 Lexico-semantic Features
+      #   31, # ~50%
+      #   46, # ~75%
+      #   61  # 100%
+      # ]
+      # feature_selector__k: [
+      #   18, # ~25% of 69 Syntax Features
+      #   35, # ~50%
+      #   52, # ~75%
+      #   69  # 100%
+      # ]
+      # feature_selector__k: [ 
+      #   58,   # 25% of 229 eGeMAPS + LFTK Features
+      #   115,  # 50%
+      #   172,  # 75%
+      #   229   # 100%
+      # ]
+      data_augmenter__sampling_strategy: ["minority"]
+      data_augmenter__random_state: [55]
+      data_augmenter__k_neighbors: [5] # default
+      model__max_depth: [5, 6, 7, 8]
+      model__learning_rate: [0.02, 0.05, 0.07, 0.1]
+      model__n_estimators: [50, 100, 200, 500, 1000]
