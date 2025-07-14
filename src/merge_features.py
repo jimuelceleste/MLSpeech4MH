@@ -11,13 +11,17 @@ from machine_learning_modules.metadata import Metadata
 
 class BatchMergeFeatures(luigi.Task):
 	"""
-	Merges features by concatenation.
+	Merges features by concatenation (early feature fusion).
+	
 	See a good reference: 
 	https://www.geeksforgeeks.org/early-fusion-vs-late-fusion-in-multimodal-data-processing/
+	
 	This task expects a `metadata.csv` file with `filename` column containing the list of files. 
+	
 	The files are expected to contain "clean" features:
 	1. First row contains the column names 
 	2. Second row contains the features
+	
 	Note that this task only supports 1xD dimensional feature concatenation (1 row, D features).
 
 	Parameters:
