@@ -33,13 +33,13 @@ class MachineLearningPipeline(luigi.Task):
 	 config_file : str
 		  path to the configuration file
 
-	 Attributes
-	 ----------
+	Attributes
+	----------
 	_training_protocol : dict
 		dictionary of supported training protocols
 
-	 Methods
-	 -------
+	Methods
+	-------
 	requires()
 		Overrides luigi.Task to check if dependencies exist.
 	 get_metadata_config()
