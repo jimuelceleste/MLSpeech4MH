@@ -115,12 +115,15 @@ class HyperparameterOptimizationCVTask(luigi.Task):
 		'xgb_classifier': xgboost.XGBClassifier,
 		'logistic_regression_classifier': sklearn.linear_model.LogisticRegression,
 		'multilayer_perceptron_classifier': sklearn.neural_network.MLPClassifier,
+		'naive_bayes_classifier': sklearn.naive_bayes.GaussianNB,
 	}
 	_regression_models = {
 		'random_forest_regressor': sklearn.ensemble.RandomForestRegressor,
 		'support_vector_regressor': sklearn.svm.SVR,
 		'xgb_regressor': xgboost.XGBRegressor, 
-		'linear_regressor': sklearn.linear_model.LinearRegression, 
+		'linear_regression': sklearn.linear_model.LinearRegression, 
+		'lasso_regressor': sklearn.linear_model.Lasso,
+		'elastic_net_regressor': sklearn.linear_model.ElasticNet,
 		'multilayer_perceptron_regressor': sklearn.neural_network.MLPRegressor
 	}
 
