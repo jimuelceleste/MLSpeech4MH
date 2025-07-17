@@ -214,6 +214,12 @@ class FlatCrossValidationTask(luigi.Task):
 		Overrides luigi.Task requires() to require dependencies.
 	run()
 		Implements flat cross-validation.
+	get_model()
+		Returns the selected model.
+	save_model(model, output_dir)
+		Saves model by pickling.
+	generate_summary()
+		Generates performance summary.
 	output()
 		Defines task output.
 	"""
