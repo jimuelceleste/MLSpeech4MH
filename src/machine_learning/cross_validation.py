@@ -11,6 +11,7 @@ from machine_learning.fold_generation import FlatFoldGenerationTask
 from machine_learning.hyperparameter_optimization import HyperparameterOptimizationCVTask
 from machine_learning.metadata import Metadata
 from machine_learning.model_evaluation import ModelEvaluationTask
+from machine_learning.model_evaluation import FlatModelEvaluationTask
 from utility_modules.file import File
 
 class NestedCrossValidationTask(luigi.Task):
@@ -229,7 +230,7 @@ class FlatCrossValidationTask(luigi.Task):
 		# Metadata file
 		metadata_file = os.path.join(
 			self.input_dir, 
-			self.metadata_config['filename']
+			self.metadata_config['file']
 		)
 		yield File(metadata_file)
 
@@ -249,6 +250,7 @@ class FlatCrossValidationTask(luigi.Task):
 
 	def run(self):
 		"""Implements flat cross-validation."""
+		# 1/3 HYPERPARAMETER OPTIMIZATION
 		current_output_dir = os.path.join(
 			self.output_dir,
 			self.pipeline_config['unique_id']
@@ -270,20 +272,127 @@ class FlatCrossValidationTask(luigi.Task):
 			fold_iterator_file=fold_iterator_file
 		)
 
-		yield ModelEvaluationTask(
-			input_dir=self.input_dir,
-			output_dir=current_output_dir,
-			model_dir=current_output_dir,
-			metadata_dir=self.input_dir,
-			metadata_config=self.metadata_config,
-			training_config=self.training_config
+		# 2/3 FOLDS ARTIFACT SAVING: MODEL, PREDICTIONS, PERFORMANCE
+		# Model Predictions & Performance on Validation Sets
+		# sklearn bayes/grid search does not save these artifacts
+		n_splits = self.training_config['fold__n_splits']
+		train_metadata_config = dict(self.metadata_config)
+		train_metadata_config['file'] = 'train.csv'
+		validate_metadata_config = dict(self.metadata_config)
+		validate_metadata_config['file'] = 'validate.csv'
+		
+		for fold in range(n_splits):
+			fold_metadata_dir = os.path.join(
+				self.output_dir,
+				'flat_cv_folds',
+				f'fold_{fold}'
+			)
+
+			fold_output_dir = os.path.join(
+				self.output_dir,
+				self.pipeline_config['unique_id'],
+				f'fold_{fold}'
+			)
+
+			# Refit model with fold validation set
+			fold_model = self.get_model()
+			train_metadata = Metadata(fold_metadata_dir, train_metadata_config)
+			train_features = train_metadata.get_features(self.input_dir)
+			train_labels = train_metadata.get_labels().values.tolist()
+			fold_model = fold_model.fit(train_features, train_labels)
+			self.save_model(fold_model, fold_output_dir)
+
+			yield FlatModelEvaluationTask(
+				input_dir=self.input_dir,
+				output_dir=fold_output_dir,
+				model_dir=fold_output_dir,
+				metadata_dir=fold_metadata_dir,
+				metadata_config=validate_metadata_config,
+				training_config=self.training_config
+			)
+
+		# 3/3 GENERATE performance.csv
+		self.generate_summary()
+
+	def get_model(self):
+		"""Returns the selected model."""
+		model_file = os.path.join(
+			self.output_dir, 
+			self.pipeline_config['unique_id'],
+			'model.pkl'
 		)
 
-	def output(self):
-		"""Defines task output."""
+		with open(model_file, 'rb') as f:
+			model = pickle.load(f)
+		
+		return model
+
+	def save_model(self, model, output_dir):
+		"""Saves model by pickling.
+		
+		Parameters
+		----------
+		model : object 
+			the model instance to be saved 
+		output_dir : str
+			path to the output directory
+		"""
+		os.makedirs(output_dir, exist_ok=True)
+
+		model_file = os.path.join(output_dir, 'model.pkl')
+		
+		with open(model_file, 'wb') as f:
+			pickle.dump(model, f)
+
+		return None 
+
+	def generate_summary(self):
+		"""Generates performance summary."""
+		n_splits = self.training_config['fold__n_splits']
+		performance = []
+
+		for fold in range(n_splits):
+			fold_performance_file = os.path.join(
+				self.output_dir,
+				self.pipeline_config['unique_id'],
+				f"fold_{fold}",
+				"validation_performance.csv"
+			)
+			fold_performance = pd.read_csv(fold_performance_file)
+			performance.append(fold_performance)
+
+		performance = pd.concat(performance).reset_index(drop=True)
+		performance.loc['mean'] = performance.mean(axis=0)
+		performance.loc['std'] = performance.std(axis=0)
+		
 		performance_file = os.path.join(
 			self.output_dir, 
 			self.pipeline_config['unique_id'],
 			"performance.csv"
 		)
-		return luigi.LocalTarget(performance_file)
+		performance.to_csv(performance_file, index=True)
+
+	def output(self):
+		"""Defines task output."""
+		dependencies = []
+
+		# Models
+		n_splits = self.training_config['fold__n_splits']
+		for fold in range(n_splits):
+			model_file = os.path.join(
+				self.output_dir,
+				self.pipeline_config['unique_id'],
+				f'fold_{fold}',
+				'model.pkl'
+			)
+			dependencies.append(luigi.LocalTarget(model_file))
+
+		# Performance
+		performance_file = os.path.join(
+			self.output_dir, 
+			self.pipeline_config['unique_id'],
+			"performance.csv"
+		)
+		dependencies.append(luigi.LocalTarget(performance_file))
+
+		return dependencies

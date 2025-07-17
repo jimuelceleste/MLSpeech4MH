@@ -217,3 +217,69 @@ class ModelEvaluationTask(luigi.Task):
 		]
 
 		return dependencies
+
+
+class NestedModelEvaluationTask(ModelEvaluationTask):
+	pass
+
+
+class FlatModelEvaluationTask(ModelEvaluationTask):
+	@override
+	def save_predictions(self, metadata, predictions, labels):
+		"""Saves model predictions.
+		
+		Parameters 
+		----------
+		metadata : object 
+			Metadata instance 
+		predictions : list 
+			list of predictions 
+		labels : list 
+			list of labels
+		"""
+		output_file = os.path.join(
+			self.output_dir, 
+			"validation_predictions.csv"
+		)
+		predictions_df = pd.DataFrame.from_dict({
+			'filename': metadata.get_filenames().values.tolist(),
+			'predictions': predictions,
+			'labels': labels
+		})
+		predictions_df.to_csv(output_file, index=False)
+
+	@override
+	def save_performance(self, performance):
+		"""Saves outer validation performance.
+		
+		Parameters
+		----------
+		performance : dict 
+			dictionary of {metric : str, value : float)} pairs
+		"""
+		performance = pd.DataFrame([performance])
+		performance_file = os.path.join(
+			self.output_dir, 
+			"validation_performance.csv"
+		)
+		performance.to_csv(performance_file, index=False)
+	
+	@override
+	def output(self):
+		"""Overrides luigi.Task output() to define task outputs."""
+		performance_file = os.path.join(
+			self.output_dir, 
+			"validation_performance.csv"
+		)
+
+		prediction_file = os.path.join(
+			self.output_dir, 
+			"validation_predictions.csv"
+		)
+
+		dependencies = [
+			luigi.LocalTarget(performance_file),
+			luigi.LocalTarget(prediction_file)
+		]
+
+		return dependencies

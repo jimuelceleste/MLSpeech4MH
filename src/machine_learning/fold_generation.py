@@ -355,10 +355,10 @@ class FlatFoldGenerationTask(luigi.Task):
 	def run(self):
 		"""Overrides luigi.task run() to generate folds for cross-validation."""
 		technique = self.training_config['fold__technique']
-		if technique not in self.fold_generation_tasks.keys():
+		if technique not in self._fold_generation_tasks.keys():
 			raise Exception("Fold generation technique not supported.")
 
-		fold_generation_task = self.fold_generation_tasks[technique]
+		fold_generation_task = self._fold_generation_tasks[technique]
 		output_dir = os.path.join(self.output_dir, "flat_cv_folds")
 		
 		yield fold_generation_task(
