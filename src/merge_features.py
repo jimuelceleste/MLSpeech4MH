@@ -7,7 +7,7 @@ import pandas as pd
 from typing_extensions import override
 
 from utility_modules.file import File 
-from machine_learning_modules.metadata import Metadata
+from machine_learning.metadata import Metadata
 
 class BatchMergeFeatures(luigi.Task):
 	"""
