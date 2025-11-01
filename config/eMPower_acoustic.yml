@@ -1,5 +1,5 @@
 name: "eMPower Acoustic Preprocessing Pipeline"
-description: "Steps: openSMILE Feature Extraction, and openXBOW Feature Extraction"
+description: "Steps: openSMILE Feature Extraction, and DeepSpectrum Feature Extraction"
 pipeline:
   - task: "extract_opensmile_features"
     unique_id: "egemaps_functionals"
