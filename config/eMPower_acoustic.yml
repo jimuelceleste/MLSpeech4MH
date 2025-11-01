@@ -1,0 +1,25 @@
+name: "eMPower Acoustic Preprocessing Pipeline"
+description: "Steps: openSMILE Feature Extraction, and openXBOW Feature Extraction"
+pipeline:
+  - task: "extract_opensmile_features"
+    unique_id: "egemaps_functionals"
+    dependency: "input"
+    parameters:
+      feature_set: "egemaps"
+      level: "functionals"
+      is_for_openxbow: False
+  - task: "extract_opensmile_features"
+    unique_id: "egemaps_lld"
+    dependency: "input"
+    parameters:
+      feature_set: "egemaps"
+      level: "lld" 
+      is_for_openxbow: True
+  # - task: "extract_deepspectrum_features"
+  #   unique_id: "vgg19"
+  #   dependency: "input"
+  #   parameters:
+  #     threads_number: 4
+  #     batch_size: 1
+  #     extraction_network: "vgg19"
+  #     feature_layer: "fc2"

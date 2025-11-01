@@ -100,8 +100,8 @@ if __name__ == '__main__':
 	# output_dir = "/Users/jimuelcelestejr/Documents/codebook/MLSpeech4MH/results/TAUKADIAL2024_samples/acoustic"
 	# config_file = "/Users/jimuelcelestejr/Documents/codebook/MLSpeech4MH/config/TAUKADIAL2024_acoustic.yml"
 	if is_recursive:
-		# for subject in os.listdir(input_dir):
-		for subject in ["PAR1"]:
+		for subject in os.listdir(input_dir):
+		# for subject in ["PAR1"]:
 			subject_input_dir = os.path.join(input_dir, subject)
 
 			if os.path.isdir(subject_input_dir):
