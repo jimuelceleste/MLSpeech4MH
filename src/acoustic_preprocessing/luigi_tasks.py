@@ -129,7 +129,7 @@ class ExtractDeepSpectrumFeatures(OneToOneTask):
 			output_file=self.output_file, 
 			threads_number=threads_number,
 			batch_size=batch_size,
-			encoder_network=extraction_network,
+			extraction_network=extraction_network,
 			feature_layer=feature_layer
 		)
 
