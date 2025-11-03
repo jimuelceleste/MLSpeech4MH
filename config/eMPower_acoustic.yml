@@ -15,11 +15,11 @@ pipeline:
       feature_set: "egemaps"
       level: "lld" 
       is_for_openxbow: True
-  # - task: "extract_deepspectrum_features"
-  #   unique_id: "vgg19"
-  #   dependency: "input"
-  #   parameters:
-  #     threads_number: 4
-  #     batch_size: 1
-  #     extraction_network: "vgg19"
-  #     feature_layer: "fc2"
+  - task: "extract_deepspectrum_features"
+    unique_id: "vgg19"
+    dependency: "input"
+    parameters:
+      threads_number: 4
+      batch_size: 1
+      extraction_network: "vgg19"
+      feature_layer: "fc2"
