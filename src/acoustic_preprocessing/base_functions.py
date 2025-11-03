@@ -213,7 +213,7 @@ def extract_deepspectrum_features(input_file, output_file, threads_number, batch
 
 	command = [
 		'deepspectrum features', input_file,
-		'-t', threads_number, batch_size,
+		'-t', str(threads_number), str(batch_size),
 		'-nl',	# remove labels from the output
 		'-en', extraction_network,
 		'-fl', feature_layer,
