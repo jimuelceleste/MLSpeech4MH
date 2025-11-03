@@ -3,7 +3,18 @@ import os
 import shutil
 
 import luigi
-
+try:
+    import importlib.metadata  # stdlib name on py>=3.8
+except ImportError:
+    import importlib_metadata as _im
+    import sys, types
+    # create a fake package "importlib" if needed
+    if "importlib" not in sys.modules:
+        importlib_pkg = types.ModuleType("importlib")
+        sys.modules["importlib"] = importlib_pkg
+    # expose importlib.metadata -> backport
+    sys.modules["importlib.metadata"] = _im
+	
 from acoustic_preprocessing.luigi_batch_tasks import *
 from acoustic_preprocessing.luigi_tasks import *
 from utility_modules.config_parser import parse_pipeline_config
