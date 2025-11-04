@@ -1,0 +1,17 @@
+name: MLSpeech4MH
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - python=3.9
+  - luigi
+  - jupyter
+  - notebook
+  - networkx
+  - matplotlib
+  - pydot
+  - pandas
+  - scikit-learn
+  - spacy
+  - seaborn
+prefix: /Users/jimuelcelestejr/opt/anaconda3/envs/MLSpeech4MH
