@@ -162,6 +162,7 @@ class BatchExtractDeepSpectrumFeatures(BatchProcessor):
 		file = os.path.basename(input_file)
 		base, ext = os.path.splitext(file)
 		output_file = os.path.join(self.output_dir, base + ".csv")
+		print(output_file)
 		return output_file
 
 	@override

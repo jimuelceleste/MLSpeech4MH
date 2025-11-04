@@ -212,7 +212,6 @@ def extract_deepspectrum_features(input_file, output_file, threads_number, batch
 	"""
 
 	command = [
-		"python", "-m", 
 		'deepspectrum',
 		'features', 
 		input_file,
