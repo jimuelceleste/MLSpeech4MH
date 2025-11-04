@@ -11,6 +11,7 @@ def transcribe(input_file, model):
 
 
 def save_result(transcript, output_file):
+    os.makedirs(os.path.dirname(output_file), exist_ok=True)
     with open(output_file, 'w') as f:
         json.dump(transcript, f, indent=4)
     return None 
