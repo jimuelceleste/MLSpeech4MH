@@ -1,7 +1,8 @@
 import argparse
 import json
 import os 
-import time 
+import time
+import pandas as pd 
 
 import whisper 
 
@@ -47,13 +48,91 @@ def batch_transcribe(input_dir, output_dir, formats, model):
 
     return None 
 
+def transfer_to_csv(output_dir):
+    json_files = [file for file in input_dir if '.json' in file]
+    for json_file in json_files:
+        src_path = os.path.join(output_dir, json_file)
+        with open(src_path, 'r') as f:
+            array = json.load(f)
+        full_transcript = ""
+        segmented_transcript = []
+        segmented_transcript_without_short_segment = []
+
+        # extract full transcript
+        if "text" in array:
+            full_transcript = array["text"]
+        
+        # extract segments
+        if "segments" in array:
+            for item in array["segments"]:
+                transcript = item["text"]
+                start_time = item["start"]
+                end_time = item["end"]
+                if transcript != "":
+                    segmented_transcript.append([start_time, end_time, transcript])
+                    if len(transcript.rstrip()) > 2:
+                        segmented_transcript_without_short_segment.append([start_time, end_time, transcript])
+
+        # Add another column to segmented transcript for how long the pause was before each line
+        for i in range(len(segmented_transcript)):
+            if i == 0:
+                segmented_transcript[i].append('')
+            else:
+                pause_length = segmented_transcript[i][0] - segmented_transcript[i-1][1]
+                segmented_transcript[i].append(pause_length)
+        for i in range(len(segmented_transcript_without_short_segment)):
+            if i == 0:
+                segmented_transcript_without_short_segment[i].append('')
+            else:
+                pause_length = segmented_transcript_without_short_segment[i][0] - segmented_transcript_without_short_segment[i-1][1]
+                segmented_transcript_without_short_segment[i].append(pause_length)
+
+        segmented_transcripts_with_joined_segments = segmented_transcript_without_short_segment
+        i = 0
+        while i < len(segmented_transcripts_with_joined_segments) - 1:
+            if segmented_transcripts_with_joined_segments[i+1][3] < 0.6:
+                segmented_transcripts_with_joined_segments[i][2] += segmented_transcripts_with_joined_segments[i+1][2]
+                segmented_transcripts_with_joined_segments[i][1] = segmented_transcripts_with_joined_segments[i+1][1]
+                del segmented_transcripts_with_joined_segments[i+1]
+            else:
+                i += 1
+                
+        # Write csv file for full transcript
+        dest_file_full_transcript = json_file.split('.json')[0]+'_full_transcript'+'.csv'
+        with open(os.path.join(output_dir, dest_file_full_transcript), "w+") as csv_file:
+            csv_file.write(full_transcript)
+
+        # Write csv file for segmented transcript
+        segmented_transcripts_df = pd.DataFrame(segmented_transcript, columns=['start_time', 'end_time', 'transcript', 'pause_length_before'])
+        dest_file_segmented_transcript = json_file.split('.json')[0]+'_segmented_transcript'+'.csv'
+        segmented_transcripts_df.to_csv(os.path.join(output_dir, dest_file_segmented_transcript), index=False)
+
+        # Write csv file for segmented transcript with the short text removed
+        segmented_transcripts_without_short_segment_df = pd.DataFrame(segmented_transcript_without_short_segment, columns=['start_time', 'end_time', 'transcript', 'pause_length_before'])
+        dest_file_segmented_transcript_without_short_segment = json_file.split('.json')[0]+'_segmented_transcript_without_short_segment'+'.csv'
+        segmented_transcripts_without_short_segment_df.to_csv(os.path.join(output_dir, dest_file_segmented_transcript_without_short_segment), index=False)
+
+        # Write csv file for segmented transcript with segments joined based on the pause
+        # segmented_transcripts_with_joined_segments_df = pd.DataFrame(segmented_transcripts_with_joined_segments, columns=['start_time', 'end_time', 'transcript', 'pause_length_before'])
+        # # i = 0
+        # # while i < segmented_transcripts_with_joined_segments_df.shape[0] - 1:
+        # #     if segmented_transcripts_with_joined_segments_df.at[i+1, 'pause_length_before'] < 0.6:
+        # #         segmented_transcripts_with_joined_segments_df.at[i, 'transcript'] = (segmented_transcripts_with_joined_segments_df.at[i, 'transcript'] + segmented_transcripts_with_joined_segments_df.at[i+1, 'transcript'])
+        # #         segmented_transcripts_with_joined_segments_df.at[i, 'end_time'] = (segmented_transcripts_with_joined_segments_df.at[i+1, 'end_time'])
+        # #         segmented_transcripts_with_joined_segments_df.drop([i+1], axis=0).reset_index(drop=True)
+        # #     else:
+        # #         i += 1
+        # dest_file_segmented_transcripts_with_joined_segments = json_file.split('.json')[0]+'_segmented_transcripts_with_joined_segments'+'.csv'
+        # segmented_transcripts_with_joined_segments_df.to_csv(os.path.join(output_dir, dest_file_segmented_transcripts_with_joined_segments), index=False)
+
 
 def main(input_dir, output_dir, formats):
     start_time = time.time()
     
     model = whisper.load_model("turbo", device="cuda")
     batch_transcribe(input_dir, output_dir, formats, model)
-    
+    transfer_to_csv(output_dir)
+
     end_time = time.time()
     elapsed_time = end_time - start_time
     
