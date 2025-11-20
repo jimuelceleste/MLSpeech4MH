@@ -49,7 +49,7 @@ def batch_transcribe(input_dir, output_dir, formats, model):
     return None 
 
 def transfer_to_csv(output_dir):
-    json_files = [file for file in input_dir if '.json' in file]
+    json_files = [file for file in output_dir if '.json' in file]
     for json_file in json_files:
         src_path = os.path.join(output_dir, json_file)
         with open(src_path, 'r') as f:
