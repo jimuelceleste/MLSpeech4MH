@@ -50,6 +50,29 @@ def pyannote_speaker_diarlization(audio_file, output_path):
     df = pd.DataFrame(merged_segments)
     df.to_csv(os.path.join(output_path, "speaker_diarlization_results.csv"), index=False)
 
+def idenfity_participant(output_path):
+    speaker_diarlization_results_df = pd.read_csv(os.path.join(output_path, "speaker_diarlization_results.csv"))
+    speaker_summaries = speaker_diarlization_results_df.groupby(['speaker'])['duration'].sum()
+    
+    if len(speaker_summaries) == 2:
+        speaker_summaries_sorted = speaker_summaries.sort_values(ascending=False)
+
+        participant = speaker_summaries_sorted.index[0]
+        interviewer = speaker_summaries_sorted.index[1]
+
+        summary_df = pd.DataFrame({
+            "speaker": speaker_summaries_sorted.index,
+            "total_duration": speaker_summaries_sorted.values,
+            "role": ["participant", "interviewer"]
+        })
+        summary_path = os.path.join(output_path, "speaker_summary.csv")
+        summary_df.to_csv(summary_path, index=False)
+
+        return [participant, interviewer]
+    else:
+        print("More than 2 speakers participant identification functionality is not supported yet.")
+        return [None, None]
+
 
 def audio_segment(audio_file, output_path):
     audio_file = Path(audio_file)
@@ -82,7 +105,8 @@ def main(input_dir, output_dir):
         Path(file_output_dir).mkdir(parents=True, exist_ok=True)
 
         # pyannote_speaker_diarlization(file, file_output_dir)
-        audio_segment(file, file_output_dir)
+        idenfity_participant(file_output_dir)
+        # audio_segment(file, file_output_dir)
 
 if __name__ == '__main__':
     arg_parser = argparse.ArgumentParser()
