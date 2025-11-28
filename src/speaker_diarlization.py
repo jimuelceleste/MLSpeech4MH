@@ -76,24 +76,37 @@ def idenfity_participant(output_path):
 
 def audio_segment(audio_file, output_path):
     audio_file = Path(audio_file)
-    output_path = Path(output_path)
-    csv_path = output_path / "speaker_diarlization_results.csv"
-    speaker_diarlization_results_df = pd.read_csv(csv_path)
     audio = AudioSegment.from_wav(str(audio_file))
+
+    output_path = Path(output_path)
+    speaker_diarlization_results_path = output_path / "speaker_diarlization_results.csv"
+    speaker_diarlization_results_df = pd.read_csv(speaker_diarlization_results_path)
+    speaker_summary_path = output_path / "speaker_summary.csv"
+    speaker_summary_df = pd.read_csv(speaker_summary_path)
+
+    # build mapping: speaker label -> role
+    # e.g., {"SPEAKER_00": "participant", "SPEAKER_01": "interviewer"}
+    speaker_to_role = dict(zip(speaker_summary_df["speaker"], speaker_summary_df["role"]))
     
     for index, row in speaker_diarlization_results_df.iterrows():
         start_time = float(row['start_time']) * 1000
         end_time = float(row['end_time']) * 1000
+        speaker = row["speaker"]
         # print(str(start)+"-"+str(stop))
 
+        # decide role directory based on speaker
+        role = speaker_to_role.get(speaker, "unknown")  # fallback if not in summary
+        role_dir = output_path / role
+        role_dir.mkdir(parents=True, exist_ok=True)
+
         # create output name
-        new_name = f"{audio_file.stem}_{row['start_time']}-{row['end_time']}.wav"
+        segment_file_name = f"{audio_file.stem}_{row['start_time']}-{row['end_time']}.wav"
 
         # cut segement
         audio_segment = audio[start_time:end_time]
 
-        # Save segment directly into output_path
-        segment_path = output_path / new_name
+        # save segment directly into output_path
+        segment_path = role_dir / segment_file_name
         audio_segment.export(segment_path, format="wav")
         print(f"Saved: {segment_path}")
 
