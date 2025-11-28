@@ -10,9 +10,12 @@ import argparse
 
 def pyannote_speaker_diarlization(audio_file, output_file):
     # Community-1 open-source speaker diarization pipeline
+    with open("hf_token.txt", "r") as f:
+        HF_TOKEN = f.read().strip()
+
     pipeline = Pipeline.from_pretrained(
         "pyannote/speaker-diarization-community-1",
-        token="{huggingface-token}")
+        token=HF_TOKEN)
 
     # send pipeline to GPU (when available)
     # pipeline.to(torch.device("cuda"))
