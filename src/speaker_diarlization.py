@@ -87,7 +87,7 @@ def audio_segment(audio_file, output_path):
         # print(str(start)+"-"+str(stop))
 
         # create output name
-        new_name = f"{audio_file.stem}_{str(index + 1).zfill(3)}.wav"
+        new_name = f"{audio_file.stem}_{row['start_time']}-{row['end_time']}.wav"
 
         # cut segement
         audio_segment = audio[start_time:end_time]
@@ -105,8 +105,8 @@ def main(input_dir, output_dir):
         Path(file_output_dir).mkdir(parents=True, exist_ok=True)
 
         # pyannote_speaker_diarlization(file, file_output_dir)
-        idenfity_participant(file_output_dir)
-        # audio_segment(file, file_output_dir)
+        # idenfity_participant(file_output_dir)
+        audio_segment(file, file_output_dir)
 
 if __name__ == '__main__':
     arg_parser = argparse.ArgumentParser()
