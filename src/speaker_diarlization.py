@@ -235,9 +235,9 @@ def main(input_dir, output_dir, formats):
         file_output_dir = os.path.join(output_dir, file_basename)
         Path(file_output_dir).mkdir(parents=True, exist_ok=True)
 
-        # pyannote_speaker_diarlization(file, file_output_dir)
-        # idenfity_participant(file_output_dir)
-        # audio_segment(file, file_output_dir)
+        pyannote_speaker_diarlization(file, file_output_dir)
+        idenfity_participant(file_output_dir)
+        audio_segment(file, file_output_dir)
         for role in ["interviewer", "participant"]:
             role_input_dir = os.path.join(file_output_dir, role, "recording_segments")
             role_output_dir = os.path.join(file_output_dir, role, "segment_transcripts")
