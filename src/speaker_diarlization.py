@@ -1,5 +1,4 @@
 from pyannote.audio import Pipeline
-from pyannote.audio.pipelines.utils.hook import ProgressHook
 import pandas as pd
 from pydub import AudioSegment
 from pathlib import Path
@@ -24,8 +23,7 @@ def pyannote_speaker_diarlization(audio_file, output_path):
     # pipeline.to(torch.device("cuda"))
 
     # apply pretrained pipeline (with optional progress hook)
-    with ProgressHook() as hook:
-        output = pipeline(audio_file, hook=hook, num_speakers=2)  # runs locally
+    output = pipeline(audio_file, num_speakers=2)  # runs locally
 
     # save the result
     segments = []
