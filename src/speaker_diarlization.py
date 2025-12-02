@@ -257,9 +257,9 @@ if __name__ == '__main__':
     is_recursive = args.recursive
     formats = ["wav"] # change as needed
 
-    input_dir = "D:\\Study\\eMPowerProject\\check_in_recordings_wav_cleaned\\denoised_and_normalized"
-    output_dir = "D:\\Study\\eMPowerProject\\results"
-    is_recursive = True
+    # input_dir = "D:\\Study\\eMPowerProject\\check_in_recordings_wav_cleaned\\denoised_and_normalized"
+    # output_dir = "D:\\Study\\eMPowerProject\\results"
+    # is_recursive = True
 
     if is_recursive:
         for subject in ["PAR1"]:
