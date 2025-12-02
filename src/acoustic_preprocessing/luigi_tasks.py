@@ -1,7 +1,4 @@
-import os
-
 import luigi
-import pandas as pd 
 from typing_extensions import override
 
 from acoustic_preprocessing.base_functions import *
@@ -115,6 +112,25 @@ class ExtractOpenXBOWFeatures(OneToOneTask):
 			openxbow_jar_app=openxbow_jar_app, 
 			audio_book_size=audio_book_size, 
 			clustering=clustering
+		)
+
+		return None
+
+class ExtractDeepSpectrumFeatures(OneToOneTask):
+	@override
+	def run(self):
+		threads_number = self.parameters['threads_number']
+		batch_size = self.parameters['batch_size']
+		extraction_network = self.parameters['extraction_network']
+		feature_layer = self.parameters['feature_layer']
+
+		extract_deepspectrum_features(
+			input_file=self.input_file,
+			output_file=self.output_file, 
+			threads_number=threads_number,
+			batch_size=batch_size,
+			extraction_network=extraction_network,
+			feature_layer=feature_layer
 		)
 
 		return None

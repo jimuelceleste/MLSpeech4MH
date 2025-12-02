@@ -5,7 +5,7 @@ import shutil
 import luigi
 import pandas as pd
 
-from linguistic_preprocessing_modules.luigi_batch_tasks import *
+from linguistic_preprocessing.luigi_batch_tasks import *
 from utility_modules.config_parser import parse_pipeline_config
 from utility_modules.file import File
 

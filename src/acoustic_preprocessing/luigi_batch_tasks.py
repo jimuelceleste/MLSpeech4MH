@@ -1,5 +1,4 @@
 import os
-import shutil 
 
 import luigi
 import pandas as pd 
@@ -155,4 +154,21 @@ class BatchExtractOpenXBOWFeatures(BatchProcessor):
 			parameters=self.parameters,
 			input_file=input_file, 
 			output_file=output_file, 
+		)
+	
+class BatchExtractDeepSpectrumFeatures(BatchProcessor):
+	@override
+	def _get_output_file(self, input_file):
+		file = os.path.basename(input_file)
+		base, ext = os.path.splitext(file)
+		output_file = os.path.join(self.output_dir, base + ".csv")
+		return output_file
+
+	@override
+	def _process_file(self, input_file):
+		output_file = self._get_output_file(input_file)
+		return ExtractDeepSpectrumFeatures(
+			parameters=self.parameters,
+			input_file=input_file, 
+			output_file=output_file,
 		)

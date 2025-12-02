@@ -197,3 +197,31 @@ def extract_openxbow_features(input_file, output_file, openxbow_jar_app, audio_b
 	os.remove(temp_file)
 
 	return None
+
+def extract_deepspectrum_features(input_file, output_file, threads_number, batch_size, extraction_network, feature_layer):
+	"""
+	Extracts DeepSpectrum features from an audio file.
+	See DeepSpectrum documentation: https://github.com/DeepSpectrum/DeepSpectrum
+	Parameters:
+		input_file (str): Path to the input file.
+		output_file (str): Path for the output file.
+		threads_number (int): Number of threads to be used.
+		batch_size (int): Batch size for processing multiple audio files.
+		extraction_network (str): The CNN model architecture to be used as the feature extractor (i.e., encoder) for converting audio spectrograms into embeddings.
+		feature_layer (str): Name of the layer from which features should be extracted.
+	"""
+
+	command = [
+		'deepspectrum',
+		'features', 
+		input_file,
+		'-t', str(threads_number), str(batch_size),
+		'-nl',	# remove labels from the output
+		'-en', extraction_network,
+		'-fl', feature_layer,
+		'-o', output_file
+	]
+
+	subprocess.call(command)
+
+	return None
