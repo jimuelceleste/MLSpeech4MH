@@ -18,7 +18,7 @@ def pyannote_speaker_diarlization(audio_file, output_path):
 
     pipeline = Pipeline.from_pretrained(
         "pyannote/speaker-diarization-community-1",
-        use_auth_token=HF_TOKEN)
+        token=HF_TOKEN)
 
     # send pipeline to GPU (when available)
     # pipeline.to(torch.device("cuda"))
