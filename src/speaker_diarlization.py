@@ -158,21 +158,22 @@ def batch_transcribe(input_dir, output_dir, formats, model):
 
 
 def transfer_to_csv(output_dir):
-    # output_dir = Path(output_dir) / "csv_version"
-    # output_dir.mkdir(parents=True, exist_ok=True)
+    input_dir = os.path.join(output_dir, "json_version")
+    output_dir = Path(output_dir) / "csv_version"
+    output_dir.mkdir(parents=True, exist_ok=True)
     # Get list of JSON files in the output directory
     if not os.path.isdir(output_dir):
         print(f"Output directory does not exist: {output_dir}")
         return
 
-    json_files = [file for file in os.listdir(output_dir) if file.endswith(".json")]
-    print(f"Found {len(json_files)} JSON files in {output_dir}")
+    json_files = [file for file in os.listdir(input_dir) if file.endswith(".json")]
+    print(f"Found {len(json_files)} JSON files in {input_dir}")
 
     if not json_files:
         return
 
     for json_file in json_files:
-        src_path = os.path.join(output_dir, json_file)
+        src_path = os.path.join(input_dir, json_file)
         print(f"Processing JSON: {src_path}")
 
         with open(src_path, 'r') as f:
