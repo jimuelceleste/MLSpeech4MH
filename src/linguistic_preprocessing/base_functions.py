@@ -12,7 +12,7 @@ def extract_lftk_features(input_file, output_file, domain, family, language):
 		return_format='list_key'
 	)
 
-	with open(input_file, "r") as f:
+	with open(input_file, "r", encoding="utf-8", errors="ignore") as f:
 		# Prepare text
 		text = f.read()
 		doc = nlp(text)
