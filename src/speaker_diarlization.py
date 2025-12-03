@@ -1,4 +1,5 @@
 from pyannote.audio import Pipeline
+from pyannote.audio.pipelines.utils.hook import ProgressHook
 import pandas as pd
 from pydub import AudioSegment
 from pathlib import Path
@@ -8,9 +9,14 @@ import time
 import whisper 
 import json
 import re
+import torch
+import soundfile as sf
+from pathlib import Path
 
 
 def pyannote_speaker_diarlization(audio_file, output_path):
+    audio_file = Path(audio_file)
+
     # Community-1 open-source speaker diarization pipeline
     with open("hf_token.txt", "r") as f:
         HF_TOKEN = f.read().strip()
@@ -21,9 +27,27 @@ def pyannote_speaker_diarlization(audio_file, output_path):
 
     # send pipeline to GPU (when available)
     # pipeline.to(torch.device("cuda"))
+    pipeline.to(torch.device("cpu"))
+
+    waveform_np, sample_rate = sf.read(str(audio_file)) 
+    if waveform_np.ndim == 1:  # mono
+        waveform_np = waveform_np[None, :]  # (1, time)
+    else:  # (time, channels) -> (channels, time)
+        waveform_np = waveform_np.T
+
+    waveform = torch.from_numpy(waveform_np).float()
+
+    # Build the in-memory audio mapping
+    audio_mapping = {
+        "waveform": waveform,          # (channels, time) torch.Tensor
+        "sample_rate": sample_rate,    # int
+        "uri": audio_file.stem,        # optional, used for naming
+    }
+
 
     # apply pretrained pipeline (with optional progress hook)
-    output = pipeline(audio_file, num_speakers=2)  # runs locally
+    with ProgressHook() as hook:
+        output = pipeline(audio_mapping, hook=hook, num_speakers=2)  # runs locally
 
     # save the result
     segments = []
@@ -139,7 +163,7 @@ def batch_transcribe(input_dir, output_dir, formats, model):
 
             input_file = os.path.join(root, file)
             print(f"input file: {input_file}")
-            output_file = os.path.join(output_dir, filename + ".json")
+            output_file = os.path.join(output_dir, "json_version", filename + ".json")
             # output_file = os.path.join(output_dir, "json_version", filename + ".json")
             print(f"output_file: {output_file}")
 
@@ -165,6 +189,8 @@ def extract_times_from_filename(filename):
 
 
 def transfer_to_csv(output_dir):
+    output_dir = Path(output_dir)
+
     # input/output structure
     input_dir = os.path.join(output_dir, "json_version")
 
@@ -204,10 +230,13 @@ def transfer_to_csv(output_dir):
         print(f"Combined full transcripts CSV written to {output_dir / 'all_full_transcripts.csv'}")
 
 
-def whisper_transcription_gpu(input_dir, output_dir, formats):
+def whisper_transcription(input_dir, output_dir, formats):
     start_time = time.time()
     
-    model = whisper.load_model("turbo", device="cuda")
+    device = "cuda" if torch.cuda.is_available() else "cpu"
+    print(f"Loading Whisper model on {device}...")
+    model = whisper.load_model("turbo", device=device)
+
     batch_transcribe(input_dir, output_dir, formats, model)
     transfer_to_csv(output_dir)
 
@@ -239,7 +268,7 @@ def main(input_dir, output_dir, formats):
         for role in ["interviewer", "participant"]:
             role_input_dir = os.path.join(file_output_dir, role, "recording_segments")
             role_output_dir = os.path.join(file_output_dir, role, "segment_transcripts")
-            whisper_transcription_gpu(role_input_dir, role_output_dir, formats)
+            whisper_transcription(role_input_dir, role_output_dir, formats)
 
 
 
@@ -258,6 +287,9 @@ if __name__ == '__main__':
     # input_dir = "D:\\Study\\eMPowerProject\\check_in_recordings_wav_cleaned\\denoised_and_normalized"
     # output_dir = "D:\\Study\\eMPowerProject\\results"
     # is_recursive = True
+
+    # print(torch.cuda.is_available())
+    # device = "cuda" if torch.cuda.is_available() else "cpu"
 
     if is_recursive:
         for subject in ["PAR1"]:
