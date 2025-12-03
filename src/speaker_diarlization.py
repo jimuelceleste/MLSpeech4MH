@@ -12,6 +12,7 @@ import re
 import torch
 import soundfile as sf
 from pathlib import Path
+import glob
 
 
 def pyannote_speaker_diarlization(audio_file, output_path):
@@ -231,7 +232,7 @@ def transfer_to_csv(output_dir):
 
 
 def whisper_transcription(input_dir, output_dir, formats):
-    start_time = time.time()
+    # start_time = time.time()
     
     device = "cuda" if torch.cuda.is_available() else "cpu"
     print(f"Loading Whisper model on {device}...")
@@ -240,13 +241,13 @@ def whisper_transcription(input_dir, output_dir, formats):
     batch_transcribe(input_dir, output_dir, formats, model)
     transfer_to_csv(output_dir)
 
-    end_time = time.time()
-    elapsed_time = end_time - start_time
+    # end_time = time.time()
+    # elapsed_time = end_time - start_time
     
-    print("Time summary")
-    print(f"start: {start_time}")
-    print(f"end: {end_time}")
-    print(f"elapsed time: {elapsed_time}")
+    # print("Time summary")
+    # print(f"start: {start_time}")
+    # print(f"end: {end_time}")
+    # print(f"elapsed time: {elapsed_time}")
     
     # output_file = os.path.join(output_dir, "time.txt")
     # with open(output_file, "w") as f:
@@ -256,8 +257,8 @@ def whisper_transcription(input_dir, output_dir, formats):
 
 
 def main(input_dir, output_dir, formats):
-    # for file in glob.glob(os.path.join(input_dir, '*.wav')):
-    for file in [os.path.join(input_dir, "PAR1 W5.wav")]:
+    for file in glob.glob(os.path.join(input_dir, '*.wav')):
+    # for file in [os.path.join(input_dir, "PAR1 W5.wav")]:
         file_basename = os.path.basename(file).split('.')[0]
         file_output_dir = os.path.join(output_dir, file_basename)
         Path(file_output_dir).mkdir(parents=True, exist_ok=True)
@@ -284,12 +285,13 @@ if __name__ == '__main__':
     is_recursive = args.recursive
     formats = ["wav"] # change as needed
 
-    # input_dir = "D:\\Study\\eMPowerProject\\check_in_recordings_wav_cleaned\\denoised_and_normalized"
-    # output_dir = "D:\\Study\\eMPowerProject\\results"
-    # is_recursive = True
+    input_dir = "D:\\Study\\eMPowerProject\\check_in_recordings_wav_cleaned\\denoised_and_normalized"
+    output_dir = "D:\\Study\\eMPowerProject\\results"
+    is_recursive = True
 
     # print(torch.cuda.is_available())
     # device = "cuda" if torch.cuda.is_available() else "cpu"
+    start_time = time.time()
 
     if is_recursive:
         for subject in ["PAR1"]:
@@ -301,3 +303,11 @@ if __name__ == '__main__':
                 main(subject_input_dir, subject_outpu_dir, formats)
     else:
         main(input_dir, output_dir, formats)
+
+    end_time = time.time()
+    elapsed_time = end_time - start_time
+    
+    print("Time summary")
+    print(f"start: {start_time}")
+    print(f"end: {end_time}")
+    print(f"elapsed time: {elapsed_time}")
