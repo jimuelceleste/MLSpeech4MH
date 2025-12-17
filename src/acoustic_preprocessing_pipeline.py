@@ -19,6 +19,7 @@ from acoustic_preprocessing.luigi_batch_tasks import *
 from acoustic_preprocessing.luigi_tasks import *
 from utility_modules.config_parser import parse_pipeline_config
 from utility_modules.file import File
+from create_metadata_files import create_metadata
 
 
 class AcousticPreprocessingPipeline(luigi.Task):
@@ -107,18 +108,22 @@ if __name__ == '__main__':
 	is_recursive = args.recursive
 	
 	# python src/acoustic_preprocessing_pipeline.py -I "/Users/jimuelcelestejr/Documents/codebook/MLSpeech4MH/data/TAUKADIAL2024" -O "/Users/jimuelcelestejr/Documents/codebook/MLSpeech4MH/results/TAUKADIAL2024/acoustic" -C "/Users/jimuelcelestejr/Documents/codebook/MLSpeech4MH/config/TAUKADIAL2024_acoustic.yml"	
-	# input_dir = "/Users/jimuelcelestejr/Documents/codebook/MLSpeech4MH/data/TAUKADIAL2024_samples"
-	# output_dir = "/Users/jimuelcelestejr/Documents/codebook/MLSpeech4MH/results/TAUKADIAL2024_samples/acoustic"
-	# config_file = "/Users/jimuelcelestejr/Documents/codebook/MLSpeech4MH/config/TAUKADIAL2024_acoustic.yml"
+	input_dir = "D:\\Study\\Projects\\eMPowerProject\\results"
+	output_dir = "D:\\Study\\Projects\\eMPowerProject\\acoustic_results_deepspectrum"
+	config_file = "D:\\Study\\Projects\\MLSpeech4MH\\config\\eMPower_acoustic.yml"
+	is_recursive = True
+
 	if is_recursive:
 		# for subject in os.listdir(input_dir):
 		for subject in ["PAR1"]:
-			subject_input_dir = os.path.join(input_dir, subject)
+			# subject_input_dir = os.path.join(input_dir, subject)
+			for role in ["interviewer", "participant"]:
+				subject_input_dir = os.path.join(input_dir, subject, "full_recordings", role)
 
-			if os.path.isdir(subject_input_dir):
-				# create_metadata(subject, subject_input_dir)
-				subject_output_dir = os.path.join(output_dir, subject)
-				main(subject_input_dir, subject_output_dir, config_file)
+				if os.path.isdir(subject_input_dir):
+					create_metadata(subject_input_dir)
+					subject_output_dir = os.path.join(output_dir, subject, role)
+					main(subject_input_dir, subject_output_dir, config_file)
 	else:
 		main(input_dir, output_dir, config_file)
 

@@ -13,10 +13,29 @@ import torch
 import soundfile as sf
 from pathlib import Path
 import glob
+from torch.serialization import add_safe_globals
+import inspect
+from pyannote.audio.core import task as task_mod
+
+
+
+# Allowlist all classes from pyannote.audio.core.task used in checkpoints
+safe_classes = [
+    obj
+    for name, obj in vars(task_mod).items()
+    if inspect.isclass(obj)
+]
+
+add_safe_globals(safe_classes)
 
 
 def pyannote_speaker_diarlization(audio_file, output_path):
     audio_file = Path(audio_file)
+    output_file = os.path.join(output_path, "speaker_diarlization_results.csv")
+
+    if os.path.exists(output_file):
+        print("Diarlization result already exists.")
+        return
 
     # Community-1 open-source speaker diarization pipeline
     with open("hf_token.txt", "r") as f:
@@ -74,13 +93,18 @@ def pyannote_speaker_diarlization(audio_file, output_path):
 
     # save the merged segments to csv file
     df = pd.DataFrame(merged_segments)
-    df.to_csv(os.path.join(output_path, "speaker_diarlization_results.csv"), index=False)
+    df.to_csv(output_file, index=False)
 
 
 def idenfity_participant(output_path):
+    summary_path = os.path.join(output_path, "speaker_summary.csv")
+    if os.path.exists(summary_path):
+        print("Participant already identified.")
+        return
+
     speaker_diarlization_results_df = pd.read_csv(os.path.join(output_path, "speaker_diarlization_results.csv"))
     speaker_summaries = speaker_diarlization_results_df.groupby(['speaker'])['duration'].sum()
-    
+
     if len(speaker_summaries) == 2:
         speaker_summaries_sorted = speaker_summaries.sort_values(ascending=False)
 
@@ -92,7 +116,7 @@ def idenfity_participant(output_path):
             "total_duration": speaker_summaries_sorted.values,
             "role": ["participant", "interviewer"]
         })
-        summary_path = os.path.join(output_path, "speaker_summary.csv")
+        
         summary_df.to_csv(summary_path, index=False)
 
         return [participant, interviewer]
@@ -165,7 +189,6 @@ def batch_transcribe(input_dir, output_dir, formats, model):
             input_file = os.path.join(root, file)
             print(f"input file: {input_file}")
             output_file = os.path.join(output_dir, "json_version", filename + ".json")
-            # output_file = os.path.join(output_dir, "json_version", filename + ".json")
             print(f"output_file: {output_file}")
 
             if os.path.isfile(output_file):
@@ -232,8 +255,6 @@ def transfer_to_csv(output_dir):
 
 
 def whisper_transcription(input_dir, output_dir, formats):
-    # start_time = time.time()
-    
     device = "cuda" if torch.cuda.is_available() else "cpu"
     print(f"Loading Whisper model on {device}...")
     model = whisper.load_model("turbo", device=device)
@@ -241,20 +262,20 @@ def whisper_transcription(input_dir, output_dir, formats):
     batch_transcribe(input_dir, output_dir, formats, model)
     transfer_to_csv(output_dir)
 
-    # end_time = time.time()
-    # elapsed_time = end_time - start_time
-    
-    # print("Time summary")
-    # print(f"start: {start_time}")
-    # print(f"end: {end_time}")
-    # print(f"elapsed time: {elapsed_time}")
-    
-    # output_file = os.path.join(output_dir, "time.txt")
-    # with open(output_file, "w") as f:
-    #     f.write(f"start: {start_time}")
-    #     f.write(f"end: {end_time}")
-    #     f.write(f"elapsed time: {elapsed_time}")
+def audio_segments_combination(input_dir, output_dir, output_name):
+    Path(output_dir).mkdir(parents=True, exist_ok=True)
 
+    combined_audio = AudioSegment.empty()
+    for file in glob.glob(os.path.join(input_dir, '*.wav')):
+        audio = AudioSegment.from_file(file, format="wav")
+        combined_audio += audio
+    combined_audio.export(os.path.join(output_dir, output_name), format="wav")
+
+def csv_to_text(input_file, output_file):
+    df = pd.read_csv(input_file)
+    combined_text = " ".join(df["full_transcript"].astype(str).tolist())
+    with open(output_file, "w", encoding="utf-8") as file:
+        file.write(combined_text) 
 
 def main(input_dir, output_dir, formats):
     for file in glob.glob(os.path.join(input_dir, '*.wav')):
@@ -263,13 +284,16 @@ def main(input_dir, output_dir, formats):
         file_output_dir = os.path.join(output_dir, file_basename)
         Path(file_output_dir).mkdir(parents=True, exist_ok=True)
 
-        pyannote_speaker_diarlization(file, file_output_dir)
-        idenfity_participant(file_output_dir)
-        audio_segment(file, file_output_dir)
+        # pyannote_speaker_diarlization(file, file_output_dir)
+        # idenfity_participant(file_output_dir)
+        # audio_segment(file, file_output_dir)
         for role in ["interviewer", "participant"]:
             role_input_dir = os.path.join(file_output_dir, role, "recording_segments")
             role_output_dir = os.path.join(file_output_dir, role, "segment_transcripts")
-            whisper_transcription(role_input_dir, role_output_dir, formats)
+            # whisper_transcription(role_input_dir, role_output_dir, formats)
+            # audio_segments_combination(role_input_dir, os.path.join(output_dir, "full_recordings", role), f"{file_basename}_{role}.wav")
+            Path(os.path.join(output_dir, "full_transcripts", role)).mkdir(parents=True, exist_ok=True)
+            csv_to_text(os.path.join(role_output_dir, "all_full_transcripts.csv"), os.path.join(output_dir, "full_transcripts", role, f"{file_basename}_{role}.txt"))
 
 
 
@@ -285,8 +309,8 @@ if __name__ == '__main__':
     is_recursive = args.recursive
     formats = ["wav"] # change as needed
 
-    input_dir = "D:\\Study\\eMPowerProject\\check_in_recordings_wav_cleaned\\denoised_and_normalized"
-    output_dir = "D:\\Study\\eMPowerProject\\results"
+    input_dir = "D:\\Study\\Projects\\eMPowerProject\\check_in_recordings_wav_cleaned\\denoised_and_normalized"
+    output_dir = "D:\\Study\\Projects\\eMPowerProject\\results"
     is_recursive = True
 
     # print(torch.cuda.is_available())
