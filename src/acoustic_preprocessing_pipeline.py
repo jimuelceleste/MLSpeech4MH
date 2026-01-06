@@ -114,8 +114,8 @@ if __name__ == '__main__':
 	is_recursive = True
 
 	if is_recursive:
-		# for subject in os.listdir(input_dir):
-		for subject in ["PAR1"]:
+		for subject in os.listdir(input_dir):
+		# for subject in ["PAR1"]:
 			# subject_input_dir = os.path.join(input_dir, subject)
 			for role in ["interviewer", "participant"]:
 				subject_input_dir = os.path.join(input_dir, subject, "full_recordings", role)

@@ -279,19 +279,21 @@ def csv_to_text(input_file, output_file):
 
 def main(input_dir, output_dir, formats):
     for file in glob.glob(os.path.join(input_dir, '*.wav')):
+        if file == "D:\\Study\\Projects\\eMPowerProject\\check_in_recordings_wav_cleaned\\denoised_and_normalized\\PAR1154\\PAR1154 W3.wav":
+            continue
     # for file in [os.path.join(input_dir, "PAR1 W5.wav")]:
         file_basename = os.path.basename(file).split('.')[0]
         file_output_dir = os.path.join(output_dir, file_basename)
         Path(file_output_dir).mkdir(parents=True, exist_ok=True)
 
-        # pyannote_speaker_diarlization(file, file_output_dir)
-        # idenfity_participant(file_output_dir)
-        # audio_segment(file, file_output_dir)
+        pyannote_speaker_diarlization(file, file_output_dir)
+        idenfity_participant(file_output_dir)
+        audio_segment(file, file_output_dir)
         for role in ["interviewer", "participant"]:
             role_input_dir = os.path.join(file_output_dir, role, "recording_segments")
             role_output_dir = os.path.join(file_output_dir, role, "segment_transcripts")
-            # whisper_transcription(role_input_dir, role_output_dir, formats)
-            # audio_segments_combination(role_input_dir, os.path.join(output_dir, "full_recordings", role), f"{file_basename}_{role}.wav")
+            whisper_transcription(role_input_dir, role_output_dir, formats)
+            audio_segments_combination(role_input_dir, os.path.join(output_dir, "full_recordings", role), f"{file_basename}_{role}.wav")
             Path(os.path.join(output_dir, "full_transcripts", role)).mkdir(parents=True, exist_ok=True)
             csv_to_text(os.path.join(role_output_dir, "all_full_transcripts.csv"), os.path.join(output_dir, "full_transcripts", role, f"{file_basename}_{role}.txt"))
 
@@ -318,13 +320,14 @@ if __name__ == '__main__':
     start_time = time.time()
 
     if is_recursive:
-        for subject in ["PAR1"]:
-        # for subject in os.listdir(input_dir):
+        # for subject in ["PAR1"]:
+        for subject in os.listdir(input_dir):
+            subject_output_dir = os.path.join(output_dir, subject)
+            if os.path.isdir(subject_output_dir):
+                continue
             subject_input_dir = os.path.join(input_dir, subject)
-
             if os.path.isdir(subject_input_dir):
-                subject_outpu_dir = os.path.join(output_dir, subject)
-                main(subject_input_dir, subject_outpu_dir, formats)
+                main(subject_input_dir, subject_output_dir, formats)
     else:
         main(input_dir, output_dir, formats)
 
