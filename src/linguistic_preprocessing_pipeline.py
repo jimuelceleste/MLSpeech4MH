@@ -92,22 +92,19 @@ if __name__ == '__main__':
 	is_recursive = args.recursive
 	
 	# python src/acoustic_preprocessing_pipeline.py -I "/Users/jimuelcelestejr/Documents/codebook/MLSpeech4MH/data/TAUKADIAL2024" -O "/Users/jimuelcelestejr/Documents/codebook/MLSpeech4MH/results/TAUKADIAL2024/acoustic" -C "/Users/jimuelcelestejr/Documents/codebook/MLSpeech4MH/config/TAUKADIAL2024_acoustic.yml"	
-	input_dir = "D:\\Study\\Projects\\eMPowerProject\\results"
-	output_dir = "D:\\Study\\Projects\\eMPowerProject\\acoustic_results_deepspectrum"
-	config_file = "D:\\Study\\Projects\\MLSpeech4MH\\config\\eMPower_linguistic.yml"
-	is_recursive = True
+	# input_dir = "D:\\Study\\Projects\\eMPowerProject\\results"
+	# output_dir = "D:\\Study\\Projects\\eMPowerProject\\acoustic_results_deepspectrum"
+	# config_file = "D:\\Study\\Projects\\MLSpeech4MH\\config\\eMPower_linguistic.yml"
+	# is_recursive = True
 
 	if is_recursive:
-		# for subject in os.listdir(input_dir):
-		for subject in ["PAR1"]:
-			# subject_input_dir = os.path.join(input_dir, subject)
-			for role in ["interviewer", "participant"]:
-				subject_input_dir = os.path.join(input_dir, subject, "full_transcripts", role)
-
-				if os.path.isdir(subject_input_dir):
-					create_metadata(subject_input_dir)
-					subject_output_dir = os.path.join(output_dir, subject, role)
-					main(subject_input_dir, subject_output_dir, config_file)
+		for subject in os.listdir(input_dir):
+			subject_input_dir = os.path.join(input_dir, subject)
+			if os.path.isdir(subject_input_dir):
+				create_metadata(subject_input_dir)
+				subject_output_dir = os.path.join(output_dir, subject)
+				main(subject_input_dir, subject_output_dir, config_file)
 	else:
+		create_metadata(input_dir)
 		main(input_dir, output_dir, config_file)
 
