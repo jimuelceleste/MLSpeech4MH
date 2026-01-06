@@ -3,7 +3,7 @@ import json
 import os 
 import time
 import pandas as pd 
-
+import torch
 import whisper 
 
 
@@ -155,7 +155,10 @@ def transfer_to_csv(output_dir):
 def main(input_dir, output_dir, formats):
     start_time = time.time()
     
-    model = whisper.load_model("turbo", device="cuda")
+    device = "cuda" if torch.cuda.is_available() else "cpu"
+    print(f"Loading Whisper model on {device}...")
+    model = whisper.load_model("turbo", device=device)
+
     batch_transcribe(input_dir, output_dir, formats, model)
     transfer_to_csv(output_dir)
 
@@ -167,11 +170,12 @@ def main(input_dir, output_dir, formats):
     print(f"end: {end_time}")
     print(f"elapsed time: {elapsed_time}")
     
-    output_file = os.path.join(output_dir, "time.txt")
-    with open(output_file, "w") as f:
-        f.write(f"start: {start_time}")
-        f.write(f"end: {end_time}")
-        f.write(f"elapsed time: {elapsed_time}")
+    # output_file = os.path.join(output_dir, "time.txt")
+    # with open(output_file, "w") as f:
+    #     f.write(f"start: {start_time}")
+    #     f.write(f"end: {end_time}")
+    #     f.write(f"elapsed time: {elapsed_time}")
+
 
 
 if __name__ == "__main__":
@@ -183,5 +187,8 @@ if __name__ == "__main__":
     input_dir = args.input
     output_dir = args.output
     formats = ["wav"] # change as needed
+
+    input_dir = "D:\\Study\\eMPowerProject\\check_in_recordings_wav_cleaned\\denoised_and_normalized\\PAR1"
+    output_dir = "D:\\Study\\eMPowerProject\\results\\test"
 
     main(input_dir, output_dir, formats)

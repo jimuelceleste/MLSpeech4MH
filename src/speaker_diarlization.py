@@ -8,9 +8,35 @@ import argparse
 import time
 import whisper 
 import json
+import re
+import torch
+import soundfile as sf
+from pathlib import Path
+import glob
+from torch.serialization import add_safe_globals
+import inspect
+from pyannote.audio.core import task as task_mod
+
+
+
+# Allowlist all classes from pyannote.audio.core.task used in checkpoints
+safe_classes = [
+    obj
+    for name, obj in vars(task_mod).items()
+    if inspect.isclass(obj)
+]
+
+add_safe_globals(safe_classes)
 
 
 def pyannote_speaker_diarlization(audio_file, output_path):
+    audio_file = Path(audio_file)
+    output_file = os.path.join(output_path, "speaker_diarlization_results.csv")
+
+    if os.path.exists(output_file):
+        print("Diarlization result already exists.")
+        return
+
     # Community-1 open-source speaker diarization pipeline
     with open("hf_token.txt", "r") as f:
         HF_TOKEN = f.read().strip()
@@ -21,10 +47,27 @@ def pyannote_speaker_diarlization(audio_file, output_path):
 
     # send pipeline to GPU (when available)
     # pipeline.to(torch.device("cuda"))
+    pipeline.to(torch.device("cpu"))
+
+    waveform_np, sample_rate = sf.read(str(audio_file)) 
+    if waveform_np.ndim == 1:  # mono
+        waveform_np = waveform_np[None, :]  # (1, time)
+    else:  # (time, channels) -> (channels, time)
+        waveform_np = waveform_np.T
+
+    waveform = torch.from_numpy(waveform_np).float()
+
+    # Build the in-memory audio mapping
+    audio_mapping = {
+        "waveform": waveform,          # (channels, time) torch.Tensor
+        "sample_rate": sample_rate,    # int
+        "uri": audio_file.stem,        # optional, used for naming
+    }
+
 
     # apply pretrained pipeline (with optional progress hook)
     with ProgressHook() as hook:
-        output = pipeline(audio_file, hook=hook, num_speakers=2)  # runs locally
+        output = pipeline(audio_mapping, hook=hook, num_speakers=2)  # runs locally
 
     # save the result
     segments = []
@@ -50,13 +93,18 @@ def pyannote_speaker_diarlization(audio_file, output_path):
 
     # save the merged segments to csv file
     df = pd.DataFrame(merged_segments)
-    df.to_csv(os.path.join(output_path, "speaker_diarlization_results.csv"), index=False)
+    df.to_csv(output_file, index=False)
 
 
 def idenfity_participant(output_path):
+    summary_path = os.path.join(output_path, "speaker_summary.csv")
+    if os.path.exists(summary_path):
+        print("Participant already identified.")
+        return
+
     speaker_diarlization_results_df = pd.read_csv(os.path.join(output_path, "speaker_diarlization_results.csv"))
     speaker_summaries = speaker_diarlization_results_df.groupby(['speaker'])['duration'].sum()
-    
+
     if len(speaker_summaries) == 2:
         speaker_summaries_sorted = speaker_summaries.sort_values(ascending=False)
 
@@ -68,7 +116,7 @@ def idenfity_participant(output_path):
             "total_duration": speaker_summaries_sorted.values,
             "role": ["participant", "interviewer"]
         })
-        summary_path = os.path.join(output_path, "speaker_summary.csv")
+        
         summary_df.to_csv(summary_path, index=False)
 
         return [participant, interviewer]
@@ -140,8 +188,7 @@ def batch_transcribe(input_dir, output_dir, formats, model):
 
             input_file = os.path.join(root, file)
             print(f"input file: {input_file}")
-            output_file = os.path.join(output_dir, filename + ".json")
-            # output_file = os.path.join(output_dir, "json_version", filename + ".json")
+            output_file = os.path.join(output_dir, "json_version", filename + ".json")
             print(f"output_file: {output_file}")
 
             if os.path.isfile(output_file):
@@ -156,149 +203,99 @@ def batch_transcribe(input_dir, output_dir, formats, model):
 
     return None 
 
+def extract_times_from_filename(filename):
+    match = re.search(r"(\d+(?:\.\d+)?)\-(\d+(?:\.\d+)?)", filename)
+    if match:
+        start = float(match.group(1))
+        end = float(match.group(2))
+        return start, end
+    return None, None
+
 
 def transfer_to_csv(output_dir):
-    input_dir = os.path.join(output_dir, "json_version")
-    output_dir = Path(output_dir) / "csv_version"
-    output_dir.mkdir(parents=True, exist_ok=True)
-    # Get list of JSON files in the output directory
-    if not os.path.isdir(output_dir):
-        print(f"Output directory does not exist: {output_dir}")
-        return
+    output_dir = Path(output_dir)
 
+    # input/output structure
+    input_dir = os.path.join(output_dir, "json_version")
+
+    # get list of JSON files in the input directory
     json_files = [file for file in os.listdir(input_dir) if file.endswith(".json")]
     print(f"Found {len(json_files)} JSON files in {input_dir}")
 
     if not json_files:
         return
 
+    # get start time, end time, and the corresponding transcript for each segment's json file
+    all_full_transcripts = []  # one row per file
     for json_file in json_files:
         src_path = os.path.join(input_dir, json_file)
         print(f"Processing JSON: {src_path}")
 
-        with open(src_path, 'r') as f:
+        with open(src_path, "r", encoding="utf-8") as f:
             array = json.load(f)
 
-        full_transcript = ""
-        segmented_transcript = []
-        segmented_transcript_without_short_segment = []
+        # extract start_time and end_time from filename
+        start_time, end_time = extract_times_from_filename(json_file)
 
-        # extract full transcript
+        # extract transcript from whisper
+        full_transcript = ""
         if "text" in array:
             full_transcript = array["text"]
+            all_full_transcripts.append({
+                "start_time": start_time,
+                "end_time": end_time,
+                "full_transcript": full_transcript,
+            })
 
-        # extract segments
-        if "segments" in array:
-            for item in array["segments"]:
-                transcript = item["text"]
-                start_time = item["start"]
-                end_time = item["end"]
-                if transcript != "":
-                    segmented_transcript.append([start_time, end_time, transcript])
-                    if len(transcript.rstrip()) > 2:
-                        segmented_transcript_without_short_segment.append(
-                            [start_time, end_time, transcript]
-                        )
-
-        # Add another column for pause length before each line
-        for i in range(len(segmented_transcript)):
-            if i == 0:
-                segmented_transcript[i].append('')
-            else:
-                pause_length = segmented_transcript[i][0] - segmented_transcript[i-1][1]
-                segmented_transcript[i].append(pause_length)
-
-        for i in range(len(segmented_transcript_without_short_segment)):
-            if i == 0:
-                segmented_transcript_without_short_segment[i].append('')
-            else:
-                pause_length = (
-                    segmented_transcript_without_short_segment[i][0]
-                    - segmented_transcript_without_short_segment[i-1][1]
-                )
-                segmented_transcript_without_short_segment[i].append(pause_length)
-
-        # # Join segments based on pause
-        # segmented_transcripts_with_joined_segments = segmented_transcript_without_short_segment
-        # i = 0
-        # while i < len(segmented_transcripts_with_joined_segments) - 1:
-        #     if segmented_transcripts_with_joined_segments[i+1][3] < 0.6:
-        #         segmented_transcripts_with_joined_segments[i][2] += segmented_transcripts_with_joined_segments[i+1][2]
-        #         segmented_transcripts_with_joined_segments[i][1] = segmented_transcripts_with_joined_segments[i+1][1]
-        #         del segmented_transcripts_with_joined_segments[i+1]
-        #     else:
-        #         i += 1
-
-        # Write csv file for full transcript
-        dest_file_full_transcript = json_file.split('.json')[0] + '_full_transcript.csv'
-        with open(os.path.join(output_dir, dest_file_full_transcript), "w+", encoding="utf-8") as csv_file:
-            csv_file.write(full_transcript)
-
-        # Write csv file for segmented transcript
-        segmented_transcripts_df = pd.DataFrame(
-            segmented_transcript,
-            columns=['start_time', 'end_time', 'transcript', 'pause_length_before']
-        )
-        dest_file_segmented_transcript = json_file.split('.json')[0] + '_segmented_transcript.csv'
-        segmented_transcripts_df.to_csv(
-            os.path.join(output_dir, dest_file_segmented_transcript),
-            index=False,
-            encoding="utf-8"
-        )
-
-        # Write csv file for segmented transcript with the short text removed
-        segmented_transcripts_without_short_segment_df = pd.DataFrame(
-            segmented_transcript_without_short_segment,
-            columns=['start_time', 'end_time', 'transcript', 'pause_length_before']
-        )
-        dest_file_segmented_transcript_without_short_segment = (
-            json_file.split('.json')[0] + '_segmented_transcript_without_short_segment.csv'
-        )
-        segmented_transcripts_without_short_segment_df.to_csv(
-            os.path.join(output_dir, dest_file_segmented_transcript_without_short_segment),
-            index=False,
-            encoding="utf-8"
-        )
-
-        print(f"CSV files written for {json_file}")
+    # combine all segments' transcript into once csv file (one row per file)
+    if all_full_transcripts:
+        full_df = pd.DataFrame(all_full_transcripts)
+        full_df.to_csv(output_dir / "all_full_transcripts.csv", index=False, encoding="utf-8")
+        print(f"Combined full transcripts CSV written to {output_dir / 'all_full_transcripts.csv'}")
 
 
-def whisper_transcription_gpu(input_dir, output_dir, formats):
-    start_time = time.time()
-    
-    model = whisper.load_model("turbo", device="cuda")
+def whisper_transcription(input_dir, output_dir, formats):
+    device = "cuda" if torch.cuda.is_available() else "cpu"
+    print(f"Loading Whisper model on {device}...")
+    model = whisper.load_model("turbo", device=device)
+
     batch_transcribe(input_dir, output_dir, formats, model)
     transfer_to_csv(output_dir)
 
-    end_time = time.time()
-    elapsed_time = end_time - start_time
-    
-    print("Time summary")
-    print(f"start: {start_time}")
-    print(f"end: {end_time}")
-    print(f"elapsed time: {elapsed_time}")
-    
-    # output_file = os.path.join(output_dir, "time.txt")
-    # with open(output_file, "w") as f:
-    #     f.write(f"start: {start_time}")
-    #     f.write(f"end: {end_time}")
-    #     f.write(f"elapsed time: {elapsed_time}")
+def audio_segments_combination(input_dir, output_dir, output_name):
+    Path(output_dir).mkdir(parents=True, exist_ok=True)
 
+    combined_audio = AudioSegment.empty()
+    for file in glob.glob(os.path.join(input_dir, '*.wav')):
+        audio = AudioSegment.from_file(file, format="wav")
+        combined_audio += audio
+    combined_audio.export(os.path.join(output_dir, output_name), format="wav")
+
+def csv_to_text(input_file, output_file):
+    df = pd.read_csv(input_file)
+    combined_text = " ".join(df["full_transcript"].astype(str).tolist())
+    with open(output_file, "w", encoding="utf-8") as file:
+        file.write(combined_text) 
 
 def main(input_dir, output_dir, formats):
-    # for file in glob.glob(os.path.join(input_dir, '*.wav')):
-    for file in [os.path.join(input_dir, "PAR1 W5.wav")]:
+    for file in glob.glob(os.path.join(input_dir, '*.wav')):
+        if file == "D:\\Study\\Projects\\eMPowerProject\\check_in_recordings_wav_cleaned\\denoised_and_normalized\\PAR1154\\PAR1154 W3.wav":
+            continue
+    # for file in [os.path.join(input_dir, "PAR1 W5.wav")]:
         file_basename = os.path.basename(file).split('.')[0]
         file_output_dir = os.path.join(output_dir, file_basename)
         Path(file_output_dir).mkdir(parents=True, exist_ok=True)
 
-        # pyannote_speaker_diarlization(file, file_output_dir)
-        # idenfity_participant(file_output_dir)
-        # audio_segment(file, file_output_dir)
+        pyannote_speaker_diarlization(file, file_output_dir)
+        idenfity_participant(file_output_dir)
+        audio_segment(file, file_output_dir)
         for role in ["interviewer", "participant"]:
             role_input_dir = os.path.join(file_output_dir, role, "recording_segments")
             role_output_dir = os.path.join(file_output_dir, role, "segment_transcripts")
-            whisper_transcription_gpu(role_input_dir, role_output_dir, formats)
+            whisper_transcription(role_input_dir, role_output_dir, formats)
+            audio_segments_combination(role_input_dir, os.path.join(output_dir, "full_recordings", role), f"{file_basename}_{role}.wav")
+            Path(os.path.join(output_dir, "full_transcripts", role)).mkdir(parents=True, exist_ok=True)
+            csv_to_text(os.path.join(role_output_dir, "all_full_transcripts.csv"), os.path.join(output_dir, "full_transcripts", role, f"{file_basename}_{role}.txt"))
 
 
 
@@ -314,17 +311,30 @@ if __name__ == '__main__':
     is_recursive = args.recursive
     formats = ["wav"] # change as needed
 
-    input_dir = "D:\\Study\\eMPowerProject\\check_in_recordings_wav_cleaned\\denoised_and_normalized"
-    output_dir = "D:\\Study\\eMPowerProject\\results"
+    input_dir = "D:\\Study\\Projects\\eMPowerProject\\check_in_recordings_wav_cleaned\\denoised_and_normalized"
+    output_dir = "D:\\Study\\Projects\\eMPowerProject\\results"
     is_recursive = True
 
-    if is_recursive:
-        for subject in ["PAR1"]:
-        # for subject in os.listdir(input_dir):
-            subject_input_dir = os.path.join(input_dir, subject)
+    # print(torch.cuda.is_available())
+    # device = "cuda" if torch.cuda.is_available() else "cpu"
+    start_time = time.time()
 
+    if is_recursive:
+        # for subject in ["PAR1"]:
+        for subject in os.listdir(input_dir):
+            subject_output_dir = os.path.join(output_dir, subject)
+            if os.path.isdir(subject_output_dir):
+                continue
+            subject_input_dir = os.path.join(input_dir, subject)
             if os.path.isdir(subject_input_dir):
-                subject_outpu_dir = os.path.join(output_dir, subject)
-                main(subject_input_dir, subject_outpu_dir, formats)
+                main(subject_input_dir, subject_output_dir, formats)
     else:
         main(input_dir, output_dir, formats)
+
+    end_time = time.time()
+    elapsed_time = end_time - start_time
+    
+    print("Time summary")
+    print(f"start: {start_time}")
+    print(f"end: {end_time}")
+    print(f"elapsed time: {elapsed_time}")
